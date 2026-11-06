@@ -3,7 +3,7 @@
   "short_name": "Bendcraft",
   "start_url": "./home.html",
   "display": "standalone",
-  "background_color": "#101b18",
-  "theme_color": "#14231f",
+  "background_color": "#050505",
+  "theme_color": "#050505",
   "scope": "./"
 }
