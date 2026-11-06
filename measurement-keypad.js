@@ -71,6 +71,8 @@
   }
   function fraction(f) {
     let text = active.value.trimEnd();
+    // A tap on a prefilled mixed-unit field starts a fresh fraction measurement.
+    if (replaceOnDigit && /(?:ft|in|yd|mm|cm|m)$/.test(text)) text = '';
     if (/(?:^|\s)\d+\/\d+$/.test(text)) {
       text = text.replace(/(?:^|\s)\d+\/\d+$/, '').trimEnd();
     }
@@ -93,9 +95,6 @@
     if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     refresh();
   }
-  mount.addEventListener('pointerdown', e => {
-    if (e.target.closest('button')) e.preventDefault();
-  });
   mount.addEventListener('click', e => {
     const key = e.target.closest('button');
     if (!key || key.disabled) return;
