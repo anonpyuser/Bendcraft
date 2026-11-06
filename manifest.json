@@ -1,7 +1,7 @@
 {
   "name": "Bendcraft Field Tools",
   "short_name": "Bendcraft",
-  "start_url": "./home.html",
+  "start_url": "./home.html?v=1.5",
   "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#050505",
