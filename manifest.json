@@ -1,1 +1,9 @@
-{"name":"Bendcraft Conduit Calculator","short_name":"Bendcraft","start_url":"./","display":"standalone","background_color":"#101b18","theme_color":"#14231f"}
+{
+  "name": "Bendcraft Field Tools",
+  "short_name": "Bendcraft",
+  "start_url": "./home.html",
+  "display": "standalone",
+  "background_color": "#101b18",
+  "theme_color": "#14231f",
+  "scope": "./"
+}
