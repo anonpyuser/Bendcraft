@@ -4,6 +4,8 @@ A mobile-friendly field calculator for electricians. Bendcraft is a static HTML/
 
 ## Features
 
+- **Black / white / red** theme across the home hub, calculators, bottom app bar and touch keypad
+
 - Offset, rolling offset, 3-point and 4-point saddle, 90° stub-up, back-to-back 90s, kick 90, and segmented bend calculations
 - Inches and millimeters, with fractional-inch display
 - Construction calculator for feet, inches, fractions, conversions, area, volume, rise/run, and equal spacing
