@@ -9,6 +9,8 @@ A mobile-friendly field calculator for electricians. Bendcraft is a static HTML/
 - Construction calculator for feet, inches, fractions, conversions, area, volume, rise/run, and equal spacing
 - Saved bend calculations and calculator tape using your browser's local storage
 - iPhone-friendly layout and **Add to Home Screen** support
+- Built-in touch keypad for both calculators with large number buttons, backspace, clear, next-field navigation, and one-tap common fractions (plus optional sixteenths)
+- Unit-entry buttons in the trade calculator; on touchscreens, measurement fields use the app keypad instead of invoking the phone keyboard
 
 ## Run locally
 
@@ -33,7 +35,7 @@ The site uses relative file paths, so it works at a GitHub Pages project URL as 
 | `calculator.html` | Construction calculator interface |
 | `trade-math.js` | Mixed-unit measurement math |
 | `trade-ui.js` | Construction calculator interactions and tape |
-| `manifest.json` | Web app metadata |
+| `measurement-keypad.js` | Shared touch-first number, unit, and quick-fraction entry |\n| `measurement-keypad.css` | Shared keypad layout and tap-target styling |\n| `manifest.json` | Web app metadata |
 | `.nojekyll` | Bypass unnecessary Jekyll processing on GitHub Pages |
 
 ## Field accuracy
