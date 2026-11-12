@@ -2,7 +2,7 @@ const $=id=>document.getElementById(id), rad=x=>x*Math.PI/180;
 const definitions={
 'Offset':{fields:[['h','Offset height',6],['a','Bend angle (°)',30]],path:'M50 135 H210 L370 55 H550'},
 'Rolling offset':{fields:[['h','Rise',6],['roll','Roll / sideways distance',8],['a','Bend angle (°)',30]],path:'M50 140 H200 L360 55 H540 M200 140 L360 110 L360 55'},
-'3-point saddle':{fields:[['h','Clearance / saddle height',3],['a','Outer bend angle (°)',22.5]],path:'M50 135 H180 L300 50 L420 135 H550'},
+'3-point saddle':{fields:[['h','Clearance / saddle height',3],['a','Outer bend angle (°)',22.5],['center','Distance to obstruction center from conduit end',20]],path:'M50 135 H180 L300 50 L420 135 H550'},
 '4-point saddle':{fields:[['h','Clearance height',4],['w','Flat top between inner bends',12],['a','Bend angle (°)',30]],path:'M40 140 H140 L230 50 H370 L460 140 H560'},
 '90° stub-up':{fields:[['h','Finished stub height',12],['take','Your bender take-up',5]],path:'M70 140 H380 Q440 140 440 80 V25'},
 'Back-to-back 90s':{fields:[['span','Outside back-to-back distance',24],['od','Actual conduit outside diameter',0.706]],path:'M120 30 V100 Q120 140 160 140 H440 Q480 140 480 100 V30'},
@@ -14,14 +14,51 @@ function fmt(n){if(!Number.isFinite(n))return '—';let s=n.toFixed(3).replace(/
 function calc(t,v){let a=rad(v.a),s=v.h/Math.sin(a),sh=v.h*Math.tan(a/2),out=[],note='';if(Object.values(v).some(n=>!Number.isFinite(n)||n<0))throw Error('Enter valid nonnegative measurements.');if('a'in v&&(v.a<=0||v.a>=180||(['Offset','Rolling offset','4-point saddle','Kick 90'].includes(t)&&v.a>=90)||t==='3-point saddle'&&v.a>=90))throw Error('Enter an angle greater than 0° and less than '+(['Segmented bend'].includes(t)?180:90)+'°.');
 if(t==='Offset'){out=[['Between bend marks',s],['Theoretical shrink',sh],['Multiplier',1/Math.sin(a),'×']];note='Bend both marks to the selected angle, reversing bend direction. Spacing uses ideal centerline geometry.'}
 if(t==='Rolling offset'){let h=Math.hypot(v.h,v.roll);out=[['True offset',h],['Between bend marks',h/Math.sin(a)],['Theoretical shrink',h*Math.tan(a/2)],['Roll orientation',Math.atan2(v.roll,v.h)*180/Math.PI,'°']];note='Roll orientation is measured from the rise direction toward the sideways direction.'}
-if(t==='3-point saddle'){out=[['Center to each outer mark',s],['Center bend angle',v.a*2,'°'],['Total theoretical shrink',2*sh]];note='Outer bends use the selected angle; center bend is twice that angle in the opposite direction. Ideal point-bend spacing, before shoe corrections.'}
+if(t==='3-point saddle')return calcThreePointSaddle(v,s,sh);
 if(t==='4-point saddle'){out=[['Each sloped section / mark gap',s],['Inner mark gap',v.w],['First to fourth mark',2*s+v.w],['Total theoretical shrink',2*sh]];note='Four alternating bends: +angle, −angle, −angle, +angle. Flat top is between the two inner theoretical bend points.'}
 if(t==='90° stub-up'){if(v.h<=v.take)throw Error('Stub height must exceed take-up; verify your tool’s minimum stub.');out=[['Arrow mark from pipe end',v.h-v.take],['Finished stub',v.h]];note='Subtract your measured or manufacturer-specified take-up. Align the arrow with the calculated mark.'}
 if(t==='Back-to-back 90s'){if(v.span<=2*v.od)throw Error('Outside span must exceed twice the outside diameter.');out=[['Star mark from first inner back',v.span-v.od],['Inside clear span',v.span-2*v.od]];note='After the first 90°, measure along the straight leg from the inside back surface of the first upright. Align the star (back-of-90) with the mark. Confirm your bender’s star convention and space for both bend radii.'}
 if(t==='Kick 90'){out=[['Ideal kick-to-90 rise point',s],['Horizontal projection',v.h/Math.tan(a)],['Kick shrink',sh]];note='Distance is to the theoretical rise point on the existing 90° leg, not an arrow mark. Actual shoe radius and your chosen 90° reference must be accounted for before marking.'}
 if(t==='Segmented bend'){if(!Number.isInteger(v.n)||v.n<2||v.n>100||v.r<=0)throw Error('Use a positive radius and 2–100 whole segments.');let step=a/v.n;out=[['Angle at each interior point',v.a/v.n,'°'],['Equal chord / point spacing',2*v.r*Math.sin(step/2)],['Total polygon length',2*v.r*Math.sin(step/2)*v.n],['Smooth arc reference length',v.r*a]];note='Polygon approximation: use '+v.n+' chord segments and '+(v.n+1)+' bend points. End bends are '+(v.a/v.n/2).toFixed(3)+'° each; the '+(v.n-1)+' interior bends are '+(v.a/v.n).toFixed(3)+'° each. Verify shoe radius and minimum spacing.'}
 return {out,note}}
-function render(){ $('title').textContent=type;$('pipe').setAttribute('d',definitions[type].path);$('model').textContent=['90° stub-up','Back-to-back 90s'].includes(type)?'TOOL REFERENCE CALCULATION':'IDEAL CENTERLINE GEOMETRY';$('types').replaceChildren();for(let t in definitions){let b=document.createElement('button');b.textContent=t;b.className=t===type?'active':'';b.onclick=()=>{memory[type]={...values};type=t;values=memory[t]||Object.fromEntries(definitions[t].fields.map(([k,l,d])=>[k,!['a','n'].includes(k)&&unit==='mm'?d*25.4:d]));render()};$('types').append(b)}$('fields').replaceChildren();for(let [k,l]of definitions[type].fields){let lab=document.createElement('label');lab.textContent=l+(!['a','n'].includes(k)?' ('+unit+')':'');let input=document.createElement('input');input.inputMode='decimal';input.value=values[k];input.oninput=()=>{values[k]=parse(input.value);update()};lab.append(input);$('fields').append(lab)}update()}
+// Field factors from the Klein Tools three-point saddle table, keyed by return angle.
+const saddleFactors = {
+  22.5: { spacing: 2.5, shrink: 3 / 16 },
+  30: { spacing: 2, shrink: 1 / 4 }
+};
+
+function calcThreePointSaddle({ h, a, center }, idealSpacing, idealShrink) {
+  const factors = saddleFactors[a];
+  const spacing = factors ? h * factors.spacing : idealSpacing;
+  const shrinkToCenter = factors ? h * factors.shrink : idealShrink;
+  const out = [];
+
+  if (center !== undefined) {
+    const centerMark = center + shrinkToCenter;
+    const nearMark = centerMark - spacing;
+    if (nearMark < 0) throw Error('The near mark falls before the conduit end. Measure from the other end or allow more conduit before the obstruction.');
+    out.push(
+      ['Near outer mark from conduit end', nearMark],
+      ['Center mark from conduit end', centerMark],
+      ['Far outer mark from conduit end', centerMark + spacing]
+    );
+  }
+
+  out.push(
+    ['Center to each outer mark', spacing],
+    ['Shrink to add to center distance', shrinkToCenter],
+    ['Each outer bend', a, '°'],
+    ['Center bend', 2 * a, '°']
+  );
+
+  const measure = center === undefined ? 'Enter the distance to the obstruction center to lay out all three marks. ' : '';
+  const method = factors
+    ? 'Use the appropriate saddle notch for the center bend and the arrow for the outer bends. Keep the three bends in one plane and reverse direction at the center.'
+    : 'Custom angle uses ideal point-bend geometry. Verify the mark locations against your bender before laying out the conduit.';
+  return { out, note: measure + method };
+}
+
+function render(){ $('title').textContent=type;$('pipe').setAttribute('d',definitions[type].path);$('model').textContent=['90° stub-up','Back-to-back 90s'].includes(type)?'TOOL REFERENCE CALCULATION':type==='3-point saddle'?'SADDLE MARK LAYOUT':'IDEAL CENTERLINE GEOMETRY';$('types').replaceChildren();for(let t in definitions){let b=document.createElement('button');b.textContent=t;b.className=t===type?'active':'';b.onclick=()=>{memory[type]={...values};type=t;values=memory[t]||Object.fromEntries(definitions[t].fields.map(([k,l,d])=>[k,!['a','n'].includes(k)&&unit==='mm'?d*25.4:d]));render()};$('types').append(b)}$('fields').replaceChildren();for(let [k,l]of definitions[type].fields){let lab=document.createElement('label');lab.textContent=l+(!['a','n'].includes(k)?' ('+unit+')':'');let input=document.createElement('input');input.inputMode='decimal';input.value=values[k]??'';input.oninput=()=>{if(k==='center'&&!input.value.trim())delete values[k];else values[k]=parse(input.value);update()};lab.append(input);$('fields').append(lab)}update()}
 let current;function update(){try{current=calc(type,values);$('results').replaceChildren();for(let [label,n,suffix]of current.out){let div=document.createElement('div');div.className='result';div.textContent=label;let strong=document.createElement('strong');strong.textContent=suffix?n.toFixed(3).replace(/\.?0+$/,'')+suffix:fmt(n);div.append(strong);$('results').append(div)}$('explain').textContent=current.note;$('save').disabled=false}catch(e){current=null;$('results').textContent=e.message;$('explain').textContent='';$('save').disabled=true}}
 $('unit').onchange=e=>{let next=e.target.value,f=next==='mm'?25.4:1/25.4;for(let k in values)if(!['a','n'].includes(k))values[k]*=f;for(let t in memory)for(let k in memory[t])if(!['a','n'].includes(k))memory[t][k]*=f;unit=next;render()};
 function readSaved(){try{return JSON.parse(localStorage.getItem('bendcraft')||'[]')}catch{return []}}
